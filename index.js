@@ -1,11 +1,11 @@
 var Service;
 var Characteristic;
-var exec = require('child_process').exec;
+const axios = require('axios');
 
 module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
-  homebridge.registerAccessory('homebridge-garagedoor-command', 'GarageCommand', GarageCmdAccessory);
+  homebridge.registerAccessory('homebridge-garagedoor-relay', 'GarageRelay', GarageCmdAccessory);
 };
 
 function GarageCmdAccessory(log, config) {
@@ -31,41 +31,29 @@ GarageCmdAccessory.prototype.setState = function(isClosed, callback, context) {
   var command = accessory[prop];
   accessory.log('Commnand to run: ' + command);
 
-  exec(
-    command,
-    {
-      encoding: 'utf8',
-      timeout: 10000,
-      maxBuffer: 200*1024,
-      killSignal: 'SIGTERM',
-      cwd: null,
-      env: null
-    },
-    function (err, stdout, stderr) {
-      if (err) {
-        accessory.log('Error: ' + err);
-        callback(err || new Error('Error setting ' + accessory.name + ' to ' + state));
-      } else {
-        accessory.log('Set ' + accessory.name + ' to ' + state);
-        if (stdout.indexOf('OPENING') > -1) {
-          accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPENING);
-          setTimeout(
-            function() {
-              accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPEN);
-            },
-            accessory.statusUpdateDelay * 1000
-          );
-        } else if (stdout.indexOf('CLOSING') > -1) {
-          accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSING);
-          setTimeout(
-            function() {
-              accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
-            },
-            accessory.statusUpdateDelay * 1000
-          );
-        }
-       callback(null);
-     }
+  axios.get(command).then(({ data: status }) => {
+    accessory.log(`Set ${accessory.name} to ${state}`);
+    if (status === 'OPENING') {
+      accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPENING);
+      setTimeout(
+        function() {
+          accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.OPEN);
+        },
+        accessory.statusUpdateDelay * 1000
+      );
+    } else if (status === 'CLOSING') {
+      accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSING);
+      setTimeout(
+        function() {
+          accessory.garageDoorService.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
+        },
+        accessory.statusUpdateDelay * 1000
+      );
+    }
+    callback(null);
+  }).catch(err => {
+    accessory.log('Error: ' + err);
+    callback(err || new Error('Error setting ' + accessory.name + ' to ' + state));
   });
 };
 
@@ -73,20 +61,16 @@ GarageCmdAccessory.prototype.getState = function(callback) {
   var accessory = this;
   var command = accessory.stateCommand;
 
-  exec(command, function (err, stdout, stderr) {
-    if (err) {
-      accessory.log('Error: ' + err);
-      callback(err || new Error('Error getting state of ' + accessory.name));
-    } else {
-      var state = stdout.toString('utf-8').trim();
-      accessory.log('State of ' + accessory.name + ' is: ' + state);
-      callback(null, Characteristic.CurrentDoorState[state]);
-    }
-
+  axios.get(command).then(({ data: status }) => {
+    accessory.log(`State of ${accessory.name} is ${status}`);
+    callback(null, Characteristic.CurrentDoorState[status]);
     if (accessory.pollStateDelay > 0) {
       accessory.pollState();
     }
-  });
+  }).catch(err => {
+    accessory.log('Error: ' + err);
+    callback(err || new Error('Error getting state of ' + accessory.name));
+  })
 };
 
 GarageCmdAccessory.prototype.pollState = function() {

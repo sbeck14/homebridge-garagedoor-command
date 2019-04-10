@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-garagedoor-command",
+  "name": "homebridge-garagedoor-relay",
   "version": "0.2.0",
   "description": "Garage Door plugin for homebridge: https://github.com/nfarina/homebridge",
   "license": "ISC",
@@ -12,12 +12,24 @@
     "node": ">=0.12.0",
     "homebridge": ">=0.2.0"
   },
-  "author": {
-    "name": "Alex 'apexad' Martin"
-  },
+  "contributors": [
+    "Alex 'apexad' Martin"
+  ],
+  "author": "Samuel Beckett",
   "repository": {
     "type": "git",
-    "url": "git://github.com/apexad/homebridge-garagedoor-command.git"
+    "url": "git://github.com/sbeck14/homebridge-garagedoor-command.git"
   },
-  "dependencies": {}
+  "dependencies": {
+    "axios": "^0.18.0"
+  },
+  "bugs": {
+    "url": "https://github.com/sbeck14/homebridge-garagedoor-command/issues"
+  },
+  "homepage": "https://github.com/sbeck14/homebridge-garagedoor-command#readme",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
 }
